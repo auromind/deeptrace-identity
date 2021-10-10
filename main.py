@@ -6,13 +6,16 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, status
-from identity import db, User, Token, TokenData
+from identity import db, UserOut, UserIn, User, Token, TokenData, Password, Email
 
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from passlib.context import CryptContext
 
 from jose import JWTError, jwt
+
+from identity.models import UserOut
+
 
 app = FastAPI()
 
@@ -120,10 +123,11 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 
 
 
-@app.post('/users')
-async def create_user(user: User):
-    if hasattr(user, 'id'):
-        delattr(user, 'id')
-    ret = db.users.insert_one(user.dict(by_alias=True))
-    user.id = ret.inserted_id
-    return {'user': user}
+@app.post('/users', status_code=201, response_model=UserOut, responses={
+        400: {'description': 'User already exists.'}})
+async def create_user(user: UserIn):
+    user = db.users.find_one({'email': user.email})
+    if user:
+        raise HTTPException(status_code=400, detail='User already exists.')
+    db.users.insert_one(user.dict(by_alias=True))
+    return user
