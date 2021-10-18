@@ -8,10 +8,7 @@ NC=$(echo "\033[m")
 BOLD=$(echo "\033[1;39m")
 CMD=$(echo "\033[1;34m")
 OPT=$(echo "\033[0;34m")
-
-ENVAR="MONGO_INITDB_ROOT_USERNAME=admin
-MONGO_INITDB_ROOT_PASSWORD=secret
-MONGO_INITDB_LOCATION=temp/db"
+WARN=$(echo "\033[33m")
 
 action_usage(){
     echo -e "    ____                ______                   "
@@ -23,13 +20,36 @@ action_usage(){
     echo -e ""                                          
     echo -e "${BOLD}System Commands:${NC}"
     echo -e "   ${CMD}init${OPT} ...${NC} initializers environment;"
-    echo -e "      ${OPT}-u <USERNAME> ${NC}set MongoDB root user name;"
-    echo -e "      ${OPT}-p <PASSWORD>${NC}set MongoDB root password;"
-    echo -e "      ${OPT}-l <DIR>${NC}set MongoDB files location;"
+    echo -e "      ${OPT}-u <USERNAME> ${NC}sets MongoDB root user name;"
+    echo -e "      ${OPT}-p <PASSWORD> ${NC}sets MongoDB root password;"
+    echo -e "      ${OPT}-l <DIR>      ${NC}sets MongoDB files location;"
     echo -e "   ${CMD}test${OPT} ...${NC} runs tests;"
     echo -e "      ${OPT}-m <MARK> ${NC}runs tests for mark;"
     echo -e "      ${OPT}-c ${NC}generates code coverage summary;"
     echo -e "      ${OPT}-r ${NC}generates code coverage report;"  
+    echo -e "   ${CMD}mongo${OPT} ...${NC} runs tests;"
+    echo -e "      ${OPT}run     ${NC}builds docker and runs MongoDB first time;"
+    echo -e "      ${OPT}status  ${NC}returns MongoDB status;"
+    echo -e "      ${OPT}start   ${NC}starts MongoDB;"
+    echo -e "      ${OPT}stop    ${NC}stops MongoDB;"
+    echo -e "      ${OPT}restart ${NC}restarts MongoDB;"  
+}
+
+activate(){
+    if [ -f .envar ]; then
+        source .venv/bin/activate
+    else
+        echo -e "${WARN}You are missing the '.envar' in your environment${NC}"
+        echo -e ""
+        echo -e "Helper is using the '.envar' file to set up environment"
+        echo -e "variables before executing its commands. To create this"
+        echo -e "file run:"
+        echo -e ""
+        echo -e "   ~$ ./helper.sh init [-u USERNAME] [-p PASSWORD] [-l DIR]"
+        echo -e ""
+        echo -e "Learn more with: ./helper.sh help"
+        exit 0
+    fi
 }
 
 action_init(){
@@ -55,7 +75,7 @@ action_init(){
                 ;;
                 *) # unknown option
                     echo -e "Invalid option!"
-                    echo  -e "Usage: init [-u USERNAME] [-p PASSWORD] [-l DIR]"
+                    echo -e "Usage: init [-u USERNAME] [-p PASSWORD] [-l DIR]"
                     echo -e "Learn more with: ./helper.sh help"
                     exit
                 ;;
@@ -72,7 +92,6 @@ action_init(){
             MONGO_INITDB_LOCATION='temp/db'
         fi
 
-        echo ".envar file not found and will be created!"
         echo "# The project environment variables" > .envar
         echo "MONGO_INITDB_ROOT_USERNAME=$MONGO_INITDB_ROOT_USERNAME" >> .envar
         echo "MONGO_INITDB_ROOT_PASSWORD=$MONGO_INITDB_ROOT_PASSWORD" >> .envar 
@@ -86,13 +105,12 @@ action_init(){
     fi
 
     python3 -m venv .venv
-    source .venv/bin/activate
+    activate
     pip3 install -r requirements.txt --no-cache
 }
 
 action_test(){
-    source .venv/bin/activate
-
+    activate
     OPTS=()
     while getopts ":m:cr" opt; do
         case $opt in
@@ -116,15 +134,13 @@ action_test(){
 }
 
 action_run(){
-    source .venv/bin/activate
+    activate
     uvicorn main:app --reload
 }
 
 action_mongo(){
-    source .envar
-
+    activate
     CONTAINER_ID=$(docker ps -q --filter="NAME=mongo")
-
     case $1 in
         run)
             sudo docker run -d --name mongo \
@@ -166,7 +182,7 @@ action_mongo(){
         ;;
         *)
             echo -e "Invalid command!"
-            echo  -e "Usage: mongo [run|status|start|stop|restart]"
+            echo -e "Usage: mongo [run|status|start|stop|restart]"
             echo -e "Learn more with: ./helper.sh help"
             exit
         ;;
