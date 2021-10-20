@@ -4,3 +4,5 @@ uvicorn[standard]
 python-jose[cryptography]
 passlib[bcrypt]
 pymongo
+pylint
+flake8

@@ -2,6 +2,8 @@ import os
 import hashlib
 import binascii
 
+from .models import User
+
 def hash_password(password: str) -> str:
     """Hash a password for storing."""
     salt = b'__hash__' + hashlib.sha256(os.urandom(60)).hexdigest().encode('ascii')
@@ -25,3 +27,12 @@ def verify_password(hashed_password: str, provided_password: str) -> bool:
                                   100000)
     pwdhash = binascii.hexlify(pwdhash).decode('ascii')
     return pwdhash == hashed_password
+
+
+def authenticate_user(db, email: str, password: str):
+    user = User(**db.users.find_one({'email': email}))
+    if not user:
+        return False
+    if user.password != password:
+        return False
+    return user
